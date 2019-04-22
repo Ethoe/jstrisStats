@@ -2,12 +2,10 @@ import requests
 import re
 import datetime
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 import numpy as np
-from sklearn import linear_model
-from scipy import stats
-import math
 
-name = "Ethoe"
+name = "Explo"
 url = "https://jstris.jezevec10.com/u/" + name + "/stats?mode=1&displayAll=true"
 regex = '"x":(\d+),"y":(\d+.\d+)'
 parser = re.compile(regex)
@@ -20,20 +18,17 @@ lowest = 1000000.0
 highest = 0.0
 Xtime = []
 Ytime = []
+meanTime = []
+keep = []
 sprints.sort(key=lambda tup: tup[0])
+currentDay = sprints[0][0]
 for item in sprints:
-    if count > 2:
-        tDist = stats.t.ppf((1 - .01) / 2, count - 1)
-        mean = time/count
-        stdCount = 0
-        for number in Ytime:
-            stdCount += (number - mean) * (number - mean)
-        std = math.sqrt((1/count) * stdCount)
-        high = (tDist * (std/math.sqrt(count))) + mean
-    else:
-        high = 10000.0
-
-    if float(item[1]) < high:
+    if float(item[1]) < 600.0:
+        if currentDay != datetime.date.fromtimestamp(int(item[0])):
+            if len(keep) != 0:
+                meanTime.append((currentDay, sum(keep)/len(keep)))
+            currentDay = datetime.date.fromtimestamp(int(item[0]))
+            keep = []
         print(item)
         count += 1
         time += float(item[1])
@@ -43,16 +38,27 @@ for item in sprints:
             highest = float(item[1])
         Xtime.append(int(item[0]))
         Ytime.append(float(item[1]))
+        keep.append(float(item[1]))
 
 
 totalTime = str(datetime.timedelta(seconds=int(time)))
 
-print(name + " has played sprint 40 lines " + str(count) + " times!")
-print("With the average sprint time of " + str(time/count) + " seconds.")
+print(name + " has finished sprint 40 lines " + str(count) + " times!")
+print("With the average sprint time in the last day of play at " + str(meanTime[-1][1]) + " seconds.")
 print("Personal best being " + str(lowest) + " seconds.")
 print("Personal worst being " + str(highest) + " seconds.")
 print("and spent " + totalTime)
 
-plt.plot(Xtime, Ytime)
+
+xFix = []
+for number in Xtime:
+    xFix.append(datetime.date.fromtimestamp(number))
+plt.plot(xFix, Ytime, 'ro')
+x, y = zip(*meanTime)
+plt.plot(x, y)
+plt.ylim(10, 120)
+plt.xlabel("Date")
+plt.ylabel("Time")
+plt.title(name)
 plt.show()
 
